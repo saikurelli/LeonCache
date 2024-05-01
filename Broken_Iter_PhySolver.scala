@@ -1,11 +1,11 @@
-import leon.lang._
-import leon.lang.synthesis._
-import leon.collection._ // for List
-import scala.collection.JavaConversions._ // to try to fix foreach not a member error
+// import leon.lang._
+// import leon.lang.synthesis._
+// import leon.collection._ // for List
+// import scala.collection.JavaConversions._ // to try to fix foreach not a member error
 
 
 
-object PhvsicsSolver{
+object PhvsicsSolver extends App{
   // nanoSec map of cache tvpe to time for fetch (scaled bv 2 for integer) (L1 -> 0, L2 -> 1, RAM -> 2 )
   val cacheTiming = Map(
     0 -> 1,
@@ -83,7 +83,7 @@ object PhvsicsSolver{
         }
       }
     }
-    None()
+    None
   }
 
 
@@ -119,8 +119,8 @@ object PhvsicsSolver{
               value match {
                 case Some(value) => total += value
                 // come back and add early exit to avoid return
-                case None() => {
-                  println("Error: Unfound variable in segment " + segment + " for "+ varName)
+                case None => {
+                  println("Error: Missing " + varName + " for "+ segment)
                   return Int.MaxValue
                 }
               }
@@ -135,10 +135,11 @@ object PhvsicsSolver{
     }
     return total;
   }
-  def genCache(speed: Int, initd: Vector, endd: Vector) : List[List[List[String]]] = {
-    choose{ (x: List[List[List[String]]]) =>
-       timeToHit(speed, initd, endd, x) == 1 + 14 + 14 + 200}
-  }
+  // attempt to synthesize the cache
+  // def genCache(speed: Int, initd: Vector, endd: Vector) : List[List[List[String]]] = {
+  //   choose{ (x: List[List[List[String]]]) =>
+  //      timeToHit(speed, initd, endd, x) == 1 + 14 + 14 + 200}
+  // }
   // main method to test the solver
   // val speed = 10
   // val initd = Vector(0, 0)

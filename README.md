@@ -7,6 +7,8 @@ Files to Look at:
   - Smaller examples that show synthesis of sqrt and the calculation of timeToHit
 - test.scala
   - Showcasing 1) FP style and 2) Failed attempt at using ADT synthesizer
+- PhvsSolver.scala -> Renamed to -> Broken_Iter_PhySolver.scala
+  - Iterative version of Cache Time Solver. This was the initial version that was built with Scala directly and attempted integrating it with Leon. However, as mentioned in the report/poster, this threw errors.
 
 
 
