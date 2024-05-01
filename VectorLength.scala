@@ -30,7 +30,7 @@ object VectorLength {
     def +(newVec: Vector): Vector = Vector(h + newVec.h, v + newVec.v)
     def -(newVec: Vector): Vector = Vector(h - newVec.h, v - newVec.v)
 
-    def length:
+    def length: BigInt
        = {
       // writing out individually to reason about overflow
       val h2 = h * h
