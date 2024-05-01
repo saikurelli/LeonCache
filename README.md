@@ -1,3 +1,19 @@
+Files to Look at:
+- phySolverRecur.scala
+  - Core Synthesis based cache analysis
+- phySolverParser.scala
+  - Can make calls to this to get back variables that need to be added to a cache for a code piece
+- VectorLength.scala
+  - Smaller examples that show synthesis of sqrt and the calculation of timeToHit
+- test.scala
+  - Showcasing 1) FP style and 2) Failed attempt at using ADT synthesizer
+
+
+
+
+Including Leon readme below since I bundled it into the project for ease of use
+
+=====
 Leon 3.0 [![Build Status](http://laraquad4.epfl.ch:9000/epfl-lara/leon/status/master)](http://laraquad4.epfl.ch:9000/epfl-lara/leon)
 ==========
 

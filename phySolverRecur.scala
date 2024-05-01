@@ -2,14 +2,10 @@ import leon.lang._
 import leon.lang.synthesis._
 import leon.collection._ // for List
 import scala.collection.JavaConversions._ // to try to fix foreach not a member error
-import leon.io.{
-  FileInputStream => FIS,
-  FileOutputStream => FOS,
-  StdOut
-}
 
 
-object PhvsicsSolver_Recur{
+
+object PhvsicsSolver{
   // nanoSec map of cache tvpe to time for fetch (scaled bv 2 for integer) (L1 -> 0, L2 -> 1, RAM -> 2 )
   val cacheTiming : Map[BigInt, BigInt] = Map(
     BigInt(0) -> BigInt(1),
@@ -24,7 +20,7 @@ object PhvsicsSolver_Recur{
     BigInt(2) -> BigInt(10)
   )
 
-  val timestep_cost = BigInt(2)
+  val timestep_cost = BigInt(3)
 
   // cache structure: [[[L1_0], [L2_0], [RAM_0]], [[L1_1], [L2_1], [RAM_1]], ...] where _i is the cache at timestep i
 
@@ -51,11 +47,10 @@ object PhvsicsSolver_Recur{
       }
     }
   }
-
   // represent not being able to find a value
   sealed abstract class OptionInt
-    case class Some(v : BigInt) extends OptionInt
-    case object None extends OptionInt
+  case class Some(v : BigInt) extends OptionInt
+  case object None extends OptionInt
 
   def checkCacheForVar(cacheAtStep: List[List[String]], variable: String, cacheTypeIndex: BigInt) : OptionInt = {
     cacheAtStep match {
@@ -65,9 +60,8 @@ object PhvsicsSolver_Recur{
           if(cacheTiming.contains(cacheTypeIndex)){
             Some(cacheTiming(cacheTypeIndex))
           }else{
-            // indicate we
+            // indicate invalid cache location
             None
-
           }
         } else {
           checkCacheForVar(t, variable, cacheTypeIndex + 1)
@@ -93,7 +87,7 @@ object PhvsicsSolver_Recur{
     }
   }
 
-  def sqrt(x : Int) : Int = {
+  def isqrt(x : Int) : Int = {
     choose { (y : Int) =>
       y * y <= x && (y + 1) * (y + 1) >= x
     }
@@ -110,21 +104,22 @@ object PhvsicsSolver_Recur{
         Vector(h / c, v / c)
       }
     }
-    def length: Int = sqrt(h * h + v * v)
+    def length: Int = isqrt(h * h + v * v)
   }
 
-  def timeToHit(speed: Int, initd: Vector, endd: Vector, cache: List[List[List[String]]]) : OptionInt = {
-    val dist = endd - initd
-    if (speed != 0) {
-      val time = dist.length / speed
-      findCacheCostOverTimeStep(cache, "speed") match {
-        case Some(v) => Some(v)
-        case None => None
+  def cacheTimeToHit(speed: Int, initd: Vector, endd: Vector, cache: List[List[List[String]]]) : OptionInt = {
+    var speed = findCacheCostOverTimeStep(cache, "speed")
+    var initd = findCacheCostOverTimeStep(cache, "initd")
+    var endd = findCacheCostOverTimeStep(cache, "endd")
+    var dist = findCacheCostOverTimeStep(cache, "dist")
+    (speed, initd, endd, dist) match {
+      case (Some(s), Some(i), Some(e), Some(d)) => {
+        Some(s + i + e + d)
       }
-    }else{
-      None
+      case _ => None
     }
   }
+
 
   // check that returned value is smaller than or equal to following variables (cache in order)
 
@@ -137,16 +132,76 @@ object PhvsicsSolver_Recur{
       case None => false
     }
   }
-  // def genCache(speed: Int, initd: Vector, endd: Vector) : List[List[List[String]]] = {
-  //   choose{ (x: List[List[List[String]]]) =>
-  //     checkCacheSizesOverTimeStep(x) &&
-  //      timeToHit(speed, initd, endd, x) == None ||
-  //      timeToHit(speed, initd, endd, x) == Some(1 + 14 + 14 + 200)}
-  // }
+
+
+
+  def findOptimal(cacheList: List[List[List[String]]]) : Double = {
+    var sampleCache = List(List(List("endd"), List("initd", "dist"), List("speed")))
+    codeParser(sampleCache)
+    sampleCache
+  }ensuring { res =>
+    checkCacheSizesOverTimeStep(res) && optimizedCache(res, "speed") && optimizedCache(res, "initd") && optimizedCache(res, "endd") && optimizedCache(res, "dist")
+  }
+
+
+  // def checkNoUpgrades(cache: List[List[List[String]]], timeToBeat: BigInt, preprend: List[List[List[String]]], speed: Int, initd: Vector, endd: Vector) : Boolean = {
+  //   cache match {
+  //     case Nil() => true
+  //     case Cons(timestep, t) => {
+  //       timestep match {
+  //         case Nil() => true
+  //         case Cons(l1, Cons(l2, Cons(l3, Nil()))) => {
+  //           // if there's an elem in l3 or l2, try adding to next timestep's l1 (if not full or next timestep doesn't exist)
+  //           l3 match {
+  //             case Nil() => true
+  //             case
+  //           }
+
+  //           if(l3.length > 0){
+  //             if(t != Nil() && t.head.head.length < cacheSize(0)){
+  //               if(timeToHit(speed, initd, endd, prepend :: Cons(l1, Cons(l2, Cons(l3.tail, Nil()))) :: (t.head.head ++ l3.head) :: t.head.tail:: t.tail) > timeToBeat){
+  //                 false
+  //               }
+
+  //               ) > timeToBeat){
+  //                 return false
+  //               }
+  //             } else if
+  //             }
+  //           } else if(l2.length > 0){
+  //             if(t.length > 0 && t.head.length < cacheSize(1)){
+  //               t = Cons(l2, t.head) :: t.tail
+  //             } else {
+  //               t = Cons(l2, Nil()) :: t
+  //             }
+  //           }
+
+  //         }
+  //       }
+  //     }
+  //   }
+
+  // check that returned value is smaller than or equal to following variables (cache in order)
+
   def genCache(speed: Int, initd: Vector, endd: Vector) : List[List[List[String]]] = {
     var cache = List(List(List("endd"), List("initd", "dist"), List("speed")))
+    // codeParser(cache) - moved logic to timeToHit
     cache
   }ensuring { res =>
     checkCacheSizesOverTimeStep(res) && optimizedCache(res, "speed") && optimizedCache(res, "initd") && optimizedCache(res, "endd") && optimizedCache(res, "dist")
   }
+  // main method to test the solver
+  // val speed = 10
+  // val initd = Vector(0, 0)
+  // val endd = Vector(10, 10)
+  // cache:= [[[endd],[initd, dist],[speed]]]
+  // = 1 + 14 + 14 + 200
+  // cache:= [[[endd],[initd, dist],[]], [[speed],[],[]]]
+  // = 1 + 14 + 14 + 2* 1 =
+  // val cache = List(List(List("endd"), List("initd", "dist"), List("speed")))
+  // println(cacheTimeToHit(speed, initd, endd, cache))
+  // val cache2 = List(
+  //   List(List("endd"), List("initd", "dist"), List()),
+  //   List(List("speed"), List(), List()))
+  // println(cacheTimeToHit(speed, initd, endd, cache2))
 }
