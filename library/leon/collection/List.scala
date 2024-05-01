@@ -20,6 +20,11 @@ sealed abstract class List[T] {
 
   def length = size
 
+  def size_int: Int = (this match {
+    case Nil() => 0
+    case Cons(h, t) => 1 + t.size_int
+  }) ensuring (_ >= 0)
+
   @isabelle.function(term = "List.list.set")
   def content: Set[T] = this match {
     case Nil() => Set()
@@ -43,13 +48,15 @@ sealed abstract class List[T] {
   }
 
   def head: T = {
-    require(this != Nil[T]())
+    require((this.size > 0) ||
+      (this != Nil[T]()))
     val Cons(h, _) = this
     h
   }
 
   def tail: List[T] = {
-    require(this != Nil[T]())
+    require((this.size > 0) ||
+      (this != Nil[T]()))
     val Cons(_, t) = this
     t
   }
@@ -524,9 +531,9 @@ sealed abstract class List[T] {
     (res.content subsetOf this.content) &&
     (res.isEmpty || !p(res.head))
   }
-  
+
   def span(p: T => Boolean): (List[T], List[T]) = { this match {
-    case Cons(h,t) if p(h) => 
+    case Cons(h,t) if p(h) =>
       val (fst, snd) = t.span(p)
       (Cons(h, fst), snd)
     case _ => (Nil[T](), this)
@@ -536,7 +543,7 @@ sealed abstract class List[T] {
     (res._1.size + res._2.size == this.size) &&
     ((res._1.content ++ res._2.content) == this.content)
   }
-  
+
   def count(p: T => Boolean): BigInt = { this match {
     case Nil() => BigInt(0)
     case Cons(h, t) =>
@@ -548,17 +555,17 @@ sealed abstract class List[T] {
   def indexWhere(p: T => Boolean): BigInt = { this match {
     case Nil() => BigInt(-1)
     case Cons(h, _) if p(h) => BigInt(0)
-    case Cons(_, t) => 
+    case Cons(_, t) =>
       val rec = t.indexWhere(p)
       if (rec >= 0) rec + BigInt(1)
       else BigInt(-1)
-  }} ensuring { 
+  }} ensuring {
     _ >= BigInt(0) == (this exists p)
   }
 
 
   // Translation to other collections
-  def toSet: Set[T] = foldLeft(Set[T]()){ 
+  def toSet: Set[T] = foldLeft(Set[T]()){
     case (current, next) => current ++ Set(next)
   }
 }
@@ -581,7 +588,7 @@ object List {
     else Cons[T](x, fill[T](n-1)(x))
   } ensuring(res => (res.content == (if (n <= BigInt(0)) Set.empty[T] else Set(x))) &&
                     res.size == (if (n <= BigInt(0)) BigInt(0) else n))
-           
+
   /* Range from start (inclusive) to until (exclusive) */
   @library
   @isabelle.noBody
@@ -589,7 +596,7 @@ object List {
     require(start <= until)
     if(until <= start) Nil[BigInt]() else Cons(start, range(start + 1, until))
   } ensuring{(res: List[BigInt]) => res.size == until - start }
-  
+
   @library
   def mkString[A](l: List[A], mid: String, f : A => String) = {
     def rec(l: List[A]): String = l match {
@@ -922,7 +929,7 @@ object ListSpecs {
       case Cons(x, xs) => if (i == 0) true else appendInsert[T](xs, l2, i - 1, y)
     }
   )
-  
+
   /** A way to apply the forall axiom */
   def applyForAll[T](l: List[T], i: BigInt, p: T => Boolean): Boolean = {
     require(i >= 0 && i < l.length && l.forall(p))

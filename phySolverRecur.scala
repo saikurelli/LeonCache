@@ -69,7 +69,6 @@ object PhvsicsSolver{
       }
     }
   }
-  // TODO: return answer based on total cache storage (instead of just our variables)
   def findCacheCostOverTimeStep(cache: List[List[List[String]]], variable: String) : OptionInt = {
     cache match {
       case Nil() => None
@@ -108,6 +107,9 @@ object PhvsicsSolver{
   }
 
   def cacheTimeToHit(speed: Int, initd: Vector, endd: Vector, cache: List[List[List[String]]]) : OptionInt = {
+    // variables that would need to be looped over to compute a cache - result: [speed, initd, endd, dist]
+    // var variables = "scala phySolverParser.scala".!!.split("\n").toList
+    // commenting out to avoid running shell command
     var speed = findCacheCostOverTimeStep(cache, "speed")
     var initd = findCacheCostOverTimeStep(cache, "initd")
     var endd = findCacheCostOverTimeStep(cache, "endd")
@@ -123,7 +125,7 @@ object PhvsicsSolver{
 
   // check that returned value is smaller than or equal to following variables (cache in order)
 
-  def optimizedCache(cache: List[List[List[String]]], variable: String) : Boolean = {
+  def checkInCache(cache: List[List[List[String]]], variable: String) : Boolean = {
     val cacheCost = findCacheCostOverTimeStep(cache, variable)
     cacheCost match {
       case Some(v) => {
@@ -132,16 +134,45 @@ object PhvsicsSolver{
       case None => false
     }
   }
-
-
-
-  def findOptimal(cacheList: List[List[List[String]]]) : Double = {
-    var sampleCache = List(List(List("endd"), List("initd", "dist"), List("speed")))
-    codeParser(sampleCache)
-    sampleCache
-  }ensuring { res =>
-    checkCacheSizesOverTimeStep(res) && optimizedCache(res, "speed") && optimizedCache(res, "initd") && optimizedCache(res, "endd") && optimizedCache(res, "dist")
+  def pow(base: BigInt, exp: BigInt) : BigInt = {
+    if(exp == 0){
+      1
+    } else {
+      base * pow(base, exp - 1)
+    }
   }
+
+  def checkUpgrade(cache: List[List[List[String]]], current_timestep: BigInt) : Boolean = {
+    if(cache.size > 0){
+      val cacheType = cache.head
+      if(cacheType.length > 2 && cacheTiming.contains(BigInt(2)) && cacheTiming.contains(BigInt(0))){
+        val L3_time = cacheTiming(BigInt(2))
+        val L1_time = cacheTiming(BigInt(0))
+        // if there are any L3 caches, they should be upgraded to L1 at the end if (timestep_cost ** cache.length - current_timestep) * L3_time > L1_time
+        if(pow(timestep_cost, cache.length - current_timestep) * L1_time < L3_time){
+          false
+        } else {
+          true
+        }
+      } else {
+        true
+      }
+    } else {
+      true
+    }
+  }
+
+  def optimizedCache(cache: List[List[List[String]]]) : Boolean = {
+    checkUpgrade(cache, 0)
+  }
+
+  // def findOptimal(cacheList: List[List[List[String]]]) : Double = {
+  //   var sampleCache = List(List(List("endd"), List("initd", "dist"), List("speed")))
+  //   codeParser(sampleCache)
+  //   sampleCache
+  // }ensuring { res =>
+  //   checkCacheSizesOverTimeStep(res) && checkInCache(res, "speed") && checkInCache(res, "initd") && checkInCache(res, "endd") && checkInCache(res, "dist") && optimizedCache(res)
+  // }
 
 
   // def checkNoUpgrades(cache: List[List[List[String]]], timeToBeat: BigInt, preprend: List[List[List[String]]], speed: Int, initd: Vector, endd: Vector) : Boolean = {
@@ -186,9 +217,15 @@ object PhvsicsSolver{
   def genCache(speed: Int, initd: Vector, endd: Vector) : List[List[List[String]]] = {
     var cache = List(List(List("endd"), List("initd", "dist"), List("speed")))
     // codeParser(cache) - moved logic to timeToHit
+    if(checkCacheSizesOverTimeStep(cache) && checkInCache(cache, "speed") && checkInCache(cache, "initd") && checkInCache(cache, "endd") && optimizedCache(cache)){
+      cache
+    } else {
+      List(List(List[String]()))
+    }
     cache
   }ensuring { res =>
-    checkCacheSizesOverTimeStep(res) && optimizedCache(res, "speed") && optimizedCache(res, "initd") && optimizedCache(res, "endd") && optimizedCache(res, "dist")
+    (res.size == List(List(List[String]())).size) ||
+    (checkCacheSizesOverTimeStep(res) && checkInCache(res, "speed") && checkInCache(res, "initd") && checkInCache(res, "endd") && checkInCache(res, "dist") && optimizedCache(res))
   }
   // main method to test the solver
   // val speed = 10
